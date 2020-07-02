@@ -13,11 +13,7 @@ import re
 from textwrap import fill
 
 
-PAT_ZK_ID = re.compile(r"^(?P<id>\d+)\s(.*)")
-PAT_LINK = re.compile(r"\[\[(\d+)\]\]")
-
-
-def parse_zettels(filepaths):
+def parse_zettels(filepaths, pat_zk_id, pat_link):
     """ Parse the ID and title from the filename.
 
     Assumes that the filename has the format "YYYYMMDDHHMMSS This is title"
@@ -27,12 +23,12 @@ def parse_zettels(filepaths):
     for filepath in filepaths:
         basename = os.path.basename(filepath)
         filename, ext = os.path.splitext(basename)
-        r = PAT_ZK_ID.match(filename)
+        r = pat_zk_id.match(filename)
         if not r:
             continue
 
         with open(filepath, encoding="utf-8") as f:
-            links = PAT_LINK.findall(f.read())
+            links = pat_link.findall(f.read())
 
         document = dict(id=r.group(1), title=r.group(2), links=links)
         documents.append(document)
@@ -113,6 +109,12 @@ def parse_args(args=None):
         "--notes-dir", default=".", help="path to folder containin notes. [.]"
     )
     parser.add_argument(
+        "--link-re", default=r"\[\[(\d+)\]\]", help="regex pattern for note name"
+    )
+    parser.add_argument(
+        "--id-re", default=r"^(?P<id>\d+)\s(.*)", help="regex patter for note ID"
+    )
+    parser.add_argument(
         "--output",
         default="zettel-network",
         help="name of output file. [zettel-network]",
@@ -160,8 +162,9 @@ def parse_args(args=None):
 
 def main(args=None):
     args = parse_args(args)
-
-    zettels = parse_zettels(args.zettel_paths)
+    pat_zk_id = re.compile(args.id_re)
+    pat_link = re.compile(args.link_re)
+    zettels = parse_zettels(args.zettel_paths, pat_zk_id, pat_link)
 
     # Fail in case we didn't find a zettel
     if not zettels:
